@@ -9,17 +9,11 @@ import (
 	"strings"
 )
 
-/*
-Args
-
--c Config Directory
-*/
-
 type Menu struct {
-	ConfigDir string
-	Username  string
-	IP        string
-	Port      uint16
+	ConfigDir   string
+	MakeConfig  bool
+	ListProfile bool
+	PrintHelp   bool
 }
 
 func Start(argv []string) {
@@ -30,148 +24,181 @@ func Start(argv []string) {
 		panic(err)
 	}
 
-	// BUG Verify config directory exsists
+	// Set default config directory
 	menu.ConfigDir = configDirectory + "/sshmanager"
 
 	for arg := range argv {
-
-		if argv[arg] == "-h" || argv[arg] == "--help" {
-			PrintHelp(argv)
-		}
-
 		// Get the config directory from argv
-		if (argv[arg] == "-c" || argv[arg] == "--config") && !IsValidOpt(argv[arg+1]) {
+		if argv[arg] == "-c" || argv[arg] == "--config" {
 			if arg+1 < len(argv) {
-				// BUG Verify config directory exsists
 				menu.ConfigDir = argv[arg+1]
 			} else {
 				fmt.Println("Missing Arg after -c!")
 			}
 		}
+	}
+
+	for arg := range argv {
+
+		if argv[arg] == "-h" || argv[arg] == "--help" {
+			menu.PrintHelp = true
+		}
 
 		//Generate a config from argv
 		//Relies on -c
 		if argv[arg] == "-m" || argv[arg] == "--make" {
-			// Name        Required!
-			// Description Optional; Blank
-			// Username    Optional; Current
-			// Hostname    Required!
-			// Port        Optional; Earth default is 22
-
-			// UseKey
-			// KeyPath Optional; Sets UseKey if used
-
-			// sshmanager -m -n Localhost -d "Current System" -u root -p 22 -k "~/.ssh/HandsOff"
-			setName := false
-			setHostname := false
-
-			newConfig := NewConfigObject()
-
-			for iter := range argv {
-				if argv[iter] == "-n" || argv[iter] == "--name" {
-					if (iter+1 < len(argv)) && !IsValidOpt(argv[iter+1]) {
-						setName = true
-						newConfig.Name = argv[iter+1]
-					} else {
-						fmt.Println("Missing name after  " + argv[iter] + "!")
-						os.Exit(1)
-					}
-				}
-				if argv[iter] == "-d" || argv[iter] == "--desc" || argv[iter] == "--description" {
-					if (iter+1 < len(argv)) && !IsValidOpt(argv[iter+1]) {
-						newConfig.Description = argv[iter+1]
-					} else {
-						fmt.Println("Missing desciption after " + argv[iter] + "!")
-						os.Exit(1)
-					}
-				}
-				if argv[iter] == "-u" || argv[iter] == "--user" || argv[iter] == "--username" {
-					if (iter+1 < len(argv)) && !IsValidOpt(argv[iter+1]) {
-						newConfig.Username = argv[iter+1]
-					} else {
-						fmt.Println("Missing username after " + argv[iter] + "!")
-						os.Exit(1)
-					}
-				}
-				if argv[iter] == "-h" || argv[iter] == "--host" || argv[iter] == "--hostname" {
-					if (iter+1 < len(argv)) && !IsValidOpt(argv[iter+1]) {
-						setHostname = true
-						newConfig.Hostname = argv[iter+1]
-					} else {
-						fmt.Println("Missing hostname after " + argv[iter] + "!")
-						os.Exit(1)
-					}
-				}
-				if argv[iter] == "-p" || argv[iter] == "--port" {
-					if (iter+1 < len(argv)) && !IsValidOpt(argv[iter+1]) {
-						port, err := strconv.Atoi(argv[iter+1])
-						if err != nil {
-							fmt.Println("Failed to convert String to int")
-							panic(err)
-						}
-						newConfig.Port = uint16(port)
-					} else {
-						fmt.Println("Missing port after " + argv[iter] + "!")
-						os.Exit(1)
-					}
-				}
-				if argv[iter] == "-k" || argv[iter] == "--key" || argv[iter] == "--keyfile" {
-					if (iter+1 < len(argv)) && !IsValidOpt(argv[iter+1]) {
-						newConfig.UseKey = true
-						newConfig.KeyPath = argv[iter+1]
-					} else {
-						fmt.Println("Missing key after " + argv[iter] + "!")
-						os.Exit(1)
-					}
-				}
-
-				if argv[iter] == "-o" || argv[iter] == "--option" {
-					if iter+1 < len(argv) {
-						newConfig.SSHArgs = strings.Split(argv[iter+1], " ")
-					} else {
-						fmt.Println("Missing Quoted SSH Arguments to pass after " + argv[iter] + "!")
-						os.Exit(1)
-					}
-				}
-			}
-
-			if !setName {
-				fmt.Println("Missing name! Please specify one using -n")
-				os.Exit(1)
-			}
-			if !setHostname {
-				fmt.Println("Missing hostname! Please specify one using -h")
-				os.Exit(1)
-			}
-
-			newConfig.Write(menu.ConfigDir)
-			os.Exit(0)
+			menu.MakeConfig = true
 		}
 
 		// List the avalible configs
 		// Relies on -c
 		if argv[arg] == "-l" || argv[arg] == "--list" {
-			ConfigDir, err := os.ReadDir(menu.ConfigDir)
-			if err != nil {
-				fmt.Println("Failed to get list of files")
-				fmt.Println(menu.ConfigDir)
-				panic(err)
-			}
-
-			for k, val := range ConfigDir {
-				name := val.Name()
-				name = name[:len(name)-5]
-				fmt.Println("[" + strconv.Itoa(k) + "] " + name)
-			}
-
-			return
+			menu.ListProfile = true
 		}
 
+	}
+
+	// -h, --help; conflicts with -m, --make as a sub-option is -h, --host
+	if menu.PrintHelp && !menu.MakeConfig {
+		PrintOptions(argv)
+	}
+
+	// -c, --config
+	if !DoesPathExist(menu.ConfigDir) {
+		fmt.Println("Config directory does not exsist!")
+		fmt.Println("Config Dir:" + menu.ConfigDir)
+	}
+
+	// -l, --list
+	if menu.ListProfile {
+		ConfigDir, err := os.ReadDir(menu.ConfigDir)
+		if err != nil {
+			fmt.Println("Failed to get list of files")
+			fmt.Println(menu.ConfigDir)
+			panic(err)
+		}
+
+		for k, val := range ConfigDir {
+			name := val.Name()
+			name = name[:len(name)-5]
+			fmt.Println("[" + strconv.Itoa(k) + "] " + name)
+		}
+	}
+
+	// -m, --make
+	if menu.MakeConfig {
+		MakeConfig(argv, menu)
 	}
 
 	config := Load(argv[len(argv)-1], menu.ConfigDir)
 	StartSSH(config, argv)
 
+}
+
+func MakeConfig(argv []string, menu *Menu) {
+	// Name        Required!
+	// Description Optional; Blank
+	// Username    Optional; Current
+	// Hostname    Required!
+	// Port        Optional; Earth default is 22
+
+	// UseKey
+	// KeyPath Optional; Sets UseKey if used
+
+	// SSHArgs Optional; Injects addtional arguments into ssh
+
+	// sshmanager -m -n Localhost -d "Current System" -u root -p 22 -k "~/.ssh/HandsOff"
+	setName := false
+	setHostname := false
+
+	newConfig := NewConfigObject()
+
+	for iter := range argv {
+		if argv[iter] == "-n" || argv[iter] == "--name" {
+			if (iter+1 < len(argv)) && !IsValidOpt(argv[iter+1]) {
+				setName = true
+				newConfig.Name = argv[iter+1]
+			} else {
+				fmt.Println("Missing name after  " + argv[iter] + "!")
+				os.Exit(1)
+			}
+		}
+		if argv[iter] == "-d" || argv[iter] == "--desc" || argv[iter] == "--description" {
+			if (iter+1 < len(argv)) && !IsValidOpt(argv[iter+1]) {
+				newConfig.Description = argv[iter+1]
+			} else {
+				fmt.Println("Missing desciption after " + argv[iter] + "!")
+				os.Exit(1)
+			}
+		}
+		if argv[iter] == "-u" || argv[iter] == "--user" || argv[iter] == "--username" {
+			if (iter+1 < len(argv)) && !IsValidOpt(argv[iter+1]) {
+				newConfig.Username = argv[iter+1]
+			} else {
+				fmt.Println("Missing username after " + argv[iter] + "!")
+				os.Exit(1)
+			}
+		}
+		if argv[iter] == "-h" || argv[iter] == "--host" || argv[iter] == "--hostname" {
+			if (iter+1 < len(argv)) && !IsValidOpt(argv[iter+1]) {
+				setHostname = true
+				newConfig.Hostname = argv[iter+1]
+			} else {
+				fmt.Println("Missing hostname after " + argv[iter] + "!")
+				os.Exit(1)
+			}
+		}
+		if argv[iter] == "-p" || argv[iter] == "--port" {
+			if (iter+1 < len(argv)) && !IsValidOpt(argv[iter+1]) {
+				port, err := strconv.Atoi(argv[iter+1])
+				if err != nil {
+					fmt.Println("Failed to convert String to int")
+					panic(err)
+				}
+				newConfig.Port = uint16(port)
+			} else {
+				fmt.Println("Missing port after " + argv[iter] + "!")
+				os.Exit(1)
+			}
+		}
+		if argv[iter] == "-k" || argv[iter] == "--key" || argv[iter] == "--keyfile" {
+			if (iter+1 < len(argv)) && !IsValidOpt(argv[iter+1]) {
+				newConfig.UseKey = true
+				newConfig.KeyPath = argv[iter+1]
+			} else {
+				fmt.Println("Missing key after " + argv[iter] + "!")
+				os.Exit(1)
+			}
+		}
+
+		if argv[iter] == "-o" || argv[iter] == "--option" {
+			if iter+1 < len(argv) {
+				newConfig.SSHArgs = strings.Split(argv[iter+1], " ")
+			} else {
+				fmt.Println("Missing Quoted SSH Arguments to pass after " + argv[iter] + "!")
+				os.Exit(1)
+			}
+		}
+	}
+
+	if !setName {
+		fmt.Println("Missing name! Please specify one using -n")
+		os.Exit(1)
+	}
+	if !setHostname {
+		fmt.Println("Missing hostname! Please specify one using -h")
+		os.Exit(1)
+	}
+
+	if !DoesPathExist(menu.ConfigDir) {
+		err := os.MkdirAll(menu.ConfigDir, 0755)
+		if err != nil {
+			fmt.Println("Config folder not found. Failed to generate the correct path for it")
+			panic(err)
+		}
+	}
+	newConfig.Write(menu.ConfigDir)
+	os.Exit(0)
 }
 
 func StartSSH(config *ConfigObject, argv []string) {
@@ -242,7 +269,7 @@ func IsValidOpt(arg string) bool {
 	}
 }
 
-func PrintHelp(argv []string) {
+func PrintOptions(argv []string) {
 	fmt.Println(argv[0] + ": [options] Profile")
 	fmt.Println("    -h, --help")
 	fmt.Println("    	Displays this help text")
@@ -264,5 +291,14 @@ func PrintHelp(argv []string) {
 	fmt.Println("    		Sets the username")
 	fmt.Println("    	-k, --key")
 	fmt.Println("    		Keyfile for connection")
+
+	for _, val := range argv {
+		if val == "-debug" {
+			fmt.Println("    -d, --debug")
+			fmt.Println("    	Print debug commands; NOT SUPPORTED!")
+			fmt.Println("    -debug-sshcmd")
+			fmt.Println("    	Does not execute SSH but instead prints out the command it would run")
+		}
+	}
 	os.Exit(0)
 }
