@@ -28,6 +28,11 @@ func Start(argv []string) {
 	menu.ConfigDir = configDirectory + "/sshmanager"
 
 	for arg := range argv {
+
+		if argv[arg] == "-h" || argv[arg] == "--help" {
+			menu.PrintHelp = true
+		}
+
 		// Get the config directory from argv
 		if argv[arg] == "-c" || argv[arg] == "--config" {
 			if arg+1 < len(argv) {
@@ -35,13 +40,6 @@ func Start(argv []string) {
 			} else {
 				fmt.Println("Missing Arg after -c!")
 			}
-		}
-	}
-
-	for arg := range argv {
-
-		if argv[arg] == "-h" || argv[arg] == "--help" {
-			menu.PrintHelp = true
 		}
 
 		//Generate a config from argv
