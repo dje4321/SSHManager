@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"os/user"
 	"strconv"
+	"strings"
 )
 
 /*
@@ -126,7 +127,7 @@ func Start(argv []string) {
 
 				if argv[iter] == "-o" || argv[iter] == "--option" {
 					if iter+1 < len(argv) {
-						newConfig.SSHArgs = argv[iter+1]
+						newConfig.SSHArgs = strings.Split(argv[iter+1], " ")
 					} else {
 						fmt.Println("Missing Quoted SSH Arguments to pass after " + argv[iter] + "!")
 						os.Exit(1)
@@ -202,8 +203,8 @@ func StartSSH(config *ConfigObject, argv []string) {
 	}
 
 	// -o Args for ssh
-	if config.SSHArgs != "" {
-		sshProcess.Args = append(sshProcess.Args, config.SSHArgs)
+	if config.SSHArgs != nil {
+		sshProcess.Args = append(sshProcess.Args, config.SSHArgs...)
 	}
 
 	// -p Port

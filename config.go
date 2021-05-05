@@ -33,12 +33,12 @@ type ConfigObject struct {
 	UseKey  bool
 	KeyPath string
 
-	SSHArgs string
+	SSHArgs []string
 }
 
 func NewConfigObject() (output *ConfigObject) {
 	output = new(ConfigObject)
-	output.Version = "v0.0.1"
+	output.Version = "v0.0.2"
 	output.Name = "Error"
 	output.Description = ""
 	output.Username = "NULL"
@@ -48,7 +48,7 @@ func NewConfigObject() (output *ConfigObject) {
 	output.UseKey = false
 	output.KeyPath = "/dev/null"
 
-	output.SSHArgs = ""
+	output.SSHArgs = []string{}
 
 	return output
 }
@@ -89,4 +89,10 @@ func (c *ConfigObject) _Debug_Print() {
 	fmt.Println(c.Port)
 	fmt.Println(c.UseKey)
 	fmt.Println(c.KeyPath)
+
+	fmt.Printf("[\n")
+	for _, val := range c.SSHArgs {
+		fmt.Printf("  %s\n", val)
+	}
+	fmt.Printf("]\n")
 }
