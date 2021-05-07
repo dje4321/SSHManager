@@ -4,23 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 )
-
-/*
-
-json: {
-	display: string,
-	discription: string,
-	username: string,
-	hostname: string,
-	port: int [0-65535]
-
-	useKey: bool
-
-	keyPath: string
-}
-
-*/
 
 type ConfigObject struct {
 	Version     string
@@ -82,17 +67,19 @@ func (c *ConfigObject) Write(dir string) {
 }
 
 func (c *ConfigObject) _Debug_Print() {
-	fmt.Println(c.Name)
-	fmt.Println(c.Description)
-	fmt.Println(c.Username)
-	fmt.Println(c.Hostname)
-	fmt.Println(c.Port)
-	fmt.Println(c.UseKey)
-	fmt.Println(c.KeyPath)
+	output := os.Stderr
+	output.Write([]byte("    " + "Version:" + c.Version + "\n"))
+	output.Write([]byte("    " + "Name:" + c.Name + "\n"))
+	output.Write([]byte("    " + "Description:" + c.Description + "\n"))
+	output.Write([]byte("    " + "Username:" + c.Username + "\n"))
+	output.Write([]byte("    " + "Hostname:" + c.Hostname + "\n"))
+	output.Write([]byte("    " + "Port:" + strconv.Itoa(int(c.Port)) + "\n"))
+	output.Write([]byte("    " + "UseKey:" + strconv.FormatBool(c.UseKey) + "\n"))
+	output.Write([]byte("    " + "KeyPath:" + c.KeyPath + "\n"))
 
-	fmt.Printf("[\n")
+	output.Write([]byte("    " + "SSHArgs [" + "\n"))
 	for _, val := range c.SSHArgs {
-		fmt.Printf("  %s\n", val)
+		output.Write([]byte("    " + "    " + val + ",\n"))
 	}
-	fmt.Printf("]\n")
+	output.Write([]byte("    " + "]" + "\n"))
 }

@@ -13,5 +13,6 @@ func DoesPathExist(path string) bool {
 }
 
 func main() {
-	Start(os.Args)
+	menu := new(Menu)
+	menu.Start(os.Args)
 }

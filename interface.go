@@ -9,204 +9,322 @@ import (
 	"strings"
 )
 
-type Menu struct {
-	ConfigDir   string
-	MakeConfig  bool
-	ListProfile bool
-	PrintHelp   bool
+// 3 States can exsist for a arg
+//   1. Not supplied aka NIL
+//   2. Supplied but Invalid
+//   3. Supplied and Valid
+
+type Arg struct {
+	Key   string
+	Value string
+	Arg   string
+	Pos   int
+	Valid bool
+	Error string
 }
 
-func Start(argv []string) {
-	menu := new(Menu)
-	configDirectory, err := os.UserConfigDir()
+type Menu struct {
+	Args   []Arg
+	Config *ConfigObject
+}
+
+func IsArg(arg string, allowList []string) bool {
+	for _, val := range allowList {
+		if val == arg {
+			return true
+		}
+	}
+	return false
+}
+
+func (menu *Menu) GetConfig() string {
+	for _, arg := range menu.Args {
+		if arg.Key == "config" && arg.Valid {
+			return arg.Value
+		}
+	}
+
+	output, err := os.UserConfigDir()
 	if err != nil {
-		fmt.Println("Failed to get config directory")
+		fmt.Println("No config specified and unable to locate user config direcotry.")
 		panic(err)
 	}
+	output += "/sshmanager"
 
-	// Set default config directory
-	menu.ConfigDir = configDirectory + "/sshmanager"
+	return output
+}
 
-	for arg := range argv {
-
-		if argv[arg] == "-h" || argv[arg] == "--help" {
-			menu.PrintHelp = true
-		}
-
-		// Get the config directory from argv
-		if argv[arg] == "-c" || argv[arg] == "--config" {
-			if arg+1 < len(argv) {
-				menu.ConfigDir = argv[arg+1]
+func (menu *Menu) Parse(argv []string) {
+	for k, arg := range argv {
+		switch {
+		case IsArg(arg, []string{"-m", "--make"}):
+			config := Arg{}
+			config.Arg = arg
+			config.Key = "make"
+			config.Pos = k
+			config.Valid = true
+			menu.Args = append(menu.Args, config)
+		case IsArg(arg, []string{"-c", "--config"}):
+			config := Arg{}
+			config.Arg = arg
+			config.Key = "config"
+			config.Pos = k
+			if k+1 < len(argv) {
+				config.Value = argv[k+1]
+				config.Valid = true
 			} else {
-				fmt.Println("Missing Arg after -c!")
+				config.Valid = false
+				config.Error = fmt.Sprintf("Unable to locate value for %s\n", arg)
 			}
+			menu.Args = append(menu.Args, config)
+		case IsArg(arg, []string{"-l", "--list"}):
+			config := Arg{}
+			config.Arg = arg
+			config.Key = "list"
+			config.Pos = k
+			config.Valid = true
+			menu.Args = append(menu.Args, config)
+		case IsArg(arg, []string{"-h", "--host"}):
+			config := Arg{}
+			config.Arg = arg
+			config.Key = "host"
+			config.Pos = k
+			if k+1 < len(argv) {
+				config.Value = argv[k+1]
+				config.Valid = true
+			} else {
+				config.Valid = false
+				config.Error = fmt.Sprintf("Unable to locate value for %s\n", arg)
+			}
+			menu.Args = append(menu.Args, config)
+		case IsArg(arg, []string{"-u", "--user"}):
+			config := Arg{}
+			config.Arg = arg
+			config.Key = "user"
+			config.Pos = k
+			if k+1 < len(argv) {
+				config.Value = argv[k+1]
+				config.Valid = true
+			} else {
+				config.Valid = false
+				config.Error = fmt.Sprintf("Unable to locate value for %s\n", arg)
+			}
+			menu.Args = append(menu.Args, config)
+		case IsArg(arg, []string{"-p", "--port"}):
+			config := Arg{}
+			config.Arg = arg
+			config.Key = "port"
+			config.Pos = k
+			if k+1 < len(argv) {
+				config.Value = argv[k+1]
+				config.Valid = true
+			} else {
+				config.Valid = false
+				config.Error = fmt.Sprintf("Unable to locate value for %s\n", arg)
+			}
+			menu.Args = append(menu.Args, config)
+		case IsArg(arg, []string{"-n", "--name"}):
+			config := Arg{}
+			config.Arg = arg
+			config.Key = "name"
+			config.Pos = k
+			if k+1 < len(argv) {
+				config.Value = argv[k+1]
+				config.Valid = true
+			} else {
+				config.Valid = false
+				config.Error = fmt.Sprintf("Unable to locate value for %s\n", arg)
+			}
+			menu.Args = append(menu.Args, config)
+		case IsArg(arg, []string{"-d", "--desc"}):
+			config := Arg{}
+			config.Arg = arg
+			config.Key = "desc"
+			config.Pos = k
+			if k+1 < len(argv) {
+				config.Value = argv[k+1]
+				config.Valid = true
+			} else {
+				config.Valid = false
+				config.Error = fmt.Sprintf("Unable to locate value for %s\n", arg)
+			}
+			menu.Args = append(menu.Args, config)
+		case IsArg(arg, []string{"-k", "--key"}):
+			config := Arg{}
+			config.Arg = arg
+			config.Key = "key"
+			config.Pos = k
+			if k+1 < len(argv) {
+				config.Value = argv[k+1]
+				config.Valid = true
+			} else {
+				config.Valid = false
+				config.Error = fmt.Sprintf("Unable to locate value for %s\n", arg)
+			}
+			menu.Args = append(menu.Args, config)
+		case IsArg(arg, []string{"-o", "--option"}):
+			config := Arg{}
+			config.Arg = arg
+			config.Key = "option"
+			config.Pos = k
+			if k+1 < len(argv) {
+				config.Value = argv[k+1]
+				config.Valid = true
+			} else {
+				config.Valid = false
+				config.Error = fmt.Sprintf("Unable to locate value for %s\n", arg)
+			}
+			menu.Args = append(menu.Args, config)
+		case IsArg(arg, []string{"--help"}):
+			config := Arg{}
+			config.Arg = arg
+			config.Key = "help"
+			config.Pos = k
+			config.Valid = true
+			menu.Args = append(menu.Args, config)
+		case IsArg(arg, []string{"-debug"}):
+			config := Arg{}
+			config.Arg = arg
+			config.Key = "debug"
+			config.Pos = k
+			config.Valid = true
+			menu.Args = append(menu.Args, config)
 		}
-
-		//Generate a config from argv
-		//Relies on -c
-		if argv[arg] == "-m" || argv[arg] == "--make" {
-			menu.MakeConfig = true
-		}
-
-		// List the avalible configs
-		// Relies on -c
-		if argv[arg] == "-l" || argv[arg] == "--list" {
-			menu.ListProfile = true
-		}
-
 	}
 
-	// -h, --help; conflicts with -m, --make as a sub-option is -h, --host
-	if menu.PrintHelp && !menu.MakeConfig {
-		PrintOptions(argv)
-	}
+	config := Arg{}
+	config.Pos = len(argv) - 1
+	config.Arg = argv[config.Pos]
+	config.Key = "profile"
+	config.Valid = true
+	menu.Args = append(menu.Args, config)
+}
 
-	// -c, --config
-	if !DoesPathExist(menu.ConfigDir) {
-		fmt.Println("Config directory does not exsist!")
-		fmt.Println("Config Dir:" + menu.ConfigDir)
-	}
+func (menu *Menu) Start(argv []string) {
+	//Extract the arguments
+	menu.Parse(argv)
 
-	// -l, --list
-	if menu.ListProfile {
-		ConfigDir, err := os.ReadDir(menu.ConfigDir)
-		if err != nil {
-			fmt.Println("Failed to get list of files")
-			fmt.Println(menu.ConfigDir)
-			panic(err)
+	//Verify that all arguments pass are valid
+	for _, arg := range menu.Args {
+		if !arg.Valid {
+			fmt.Printf("%#v", arg)
+			os.Exit(1)
 		}
 
-		for k, val := range ConfigDir {
-			name := val.Name()
-			name = name[:len(name)-5]
-			fmt.Println("[" + strconv.Itoa(k) + "] " + name)
+		if arg.Key == "help" {
+			menu.PrintOptions(argv)
 		}
 	}
 
-	// -m, --make
-	if menu.MakeConfig {
-		MakeConfig(argv, menu)
+	//Determine what mode to run.
+	for _, arg := range menu.Args {
+		if arg.Key == "make" {
+			menu.MMake()
+		}
 	}
 
-	config := Load(argv[len(argv)-1], menu.ConfigDir)
-	StartSSH(config, argv)
+	menu.MRun()
 
 }
 
-func MakeConfig(argv []string, menu *Menu) {
-	// Name        Required!
-	// Description Optional; Blank
-	// Username    Optional; Current
-	// Hostname    Required!
-	// Port        Optional; Earth default is 22
+func (menu *Menu) MMake() {
+	var SetName bool
+	var SetHost bool
+	//Entered mode make from Start()
+	//All args known to be valid
 
-	// UseKey
-	// KeyPath Optional; Sets UseKey if used
+	/*
+		Name        string
+		Description string
+		Username    string
+		Hostname    string
+		Port        uint16
 
-	// SSHArgs Optional; Injects addtional arguments into ssh
+		UseKey  bool
+		KeyPath string
 
-	// sshmanager -m -n Localhost -d "Current System" -u root -p 22 -k "~/.ssh/HandsOff"
-	setName := false
-	setHostname := false
+		SSHArgs []string
+	*/
+	NewConfig := NewConfigObject()
 
-	newConfig := NewConfigObject()
-
-	for iter := range argv {
-		if argv[iter] == "-n" || argv[iter] == "--name" {
-			if (iter+1 < len(argv)) && !IsValidOpt(argv[iter+1]) {
-				setName = true
-				newConfig.Name = argv[iter+1]
-			} else {
-				fmt.Println("Missing name after  " + argv[iter] + "!")
-				os.Exit(1)
-			}
+	for _, arg := range menu.Args {
+		if arg.Key == "name" {
+			SetName = true
+			NewConfig.Name = arg.Value
 		}
-		if argv[iter] == "-d" || argv[iter] == "--desc" || argv[iter] == "--description" {
-			if (iter+1 < len(argv)) && !IsValidOpt(argv[iter+1]) {
-				newConfig.Description = argv[iter+1]
-			} else {
-				fmt.Println("Missing desciption after " + argv[iter] + "!")
-				os.Exit(1)
-			}
+		if arg.Key == "desc" {
+			NewConfig.Description = arg.Value
 		}
-		if argv[iter] == "-u" || argv[iter] == "--user" || argv[iter] == "--username" {
-			if (iter+1 < len(argv)) && !IsValidOpt(argv[iter+1]) {
-				newConfig.Username = argv[iter+1]
-			} else {
-				fmt.Println("Missing username after " + argv[iter] + "!")
-				os.Exit(1)
-			}
+		if arg.Key == "user" {
+			NewConfig.Username = arg.Value
 		}
-		if argv[iter] == "-h" || argv[iter] == "--host" || argv[iter] == "--hostname" {
-			if (iter+1 < len(argv)) && !IsValidOpt(argv[iter+1]) {
-				setHostname = true
-				newConfig.Hostname = argv[iter+1]
-			} else {
-				fmt.Println("Missing hostname after " + argv[iter] + "!")
-				os.Exit(1)
-			}
+		if arg.Key == "host" {
+			SetHost = true
+			NewConfig.Hostname = arg.Value
 		}
-		if argv[iter] == "-p" || argv[iter] == "--port" {
-			if (iter+1 < len(argv)) && !IsValidOpt(argv[iter+1]) {
-				port, err := strconv.Atoi(argv[iter+1])
-				if err != nil {
-					fmt.Println("Failed to convert String to int")
-					panic(err)
-				}
-				newConfig.Port = uint16(port)
-			} else {
-				fmt.Println("Missing port after " + argv[iter] + "!")
-				os.Exit(1)
+		if arg.Key == "port" {
+			port, err := strconv.Atoi(arg.Value)
+			if err != nil {
+				fmt.Println("Error when converting number for port")
+				panic(err)
 			}
-		}
-		if argv[iter] == "-k" || argv[iter] == "--key" || argv[iter] == "--keyfile" {
-			if (iter+1 < len(argv)) && !IsValidOpt(argv[iter+1]) {
-				newConfig.UseKey = true
-				newConfig.KeyPath = argv[iter+1]
-			} else {
-				fmt.Println("Missing key after " + argv[iter] + "!")
-				os.Exit(1)
-			}
+			NewConfig.Port = uint16(port)
 		}
 
-		if argv[iter] == "-o" || argv[iter] == "--option" {
-			if iter+1 < len(argv) {
-				newConfig.SSHArgs = strings.Split(argv[iter+1], " ")
-			} else {
-				fmt.Println("Missing Quoted SSH Arguments to pass after " + argv[iter] + "!")
-				os.Exit(1)
-			}
+		if arg.Key == "key" {
+			NewConfig.UseKey = true
+			NewConfig.KeyPath = arg.Value
+		}
+
+		if arg.Key == "option" {
+			NewConfig.SSHArgs = append(NewConfig.SSHArgs, strings.Split(arg.Value, " ")...)
 		}
 	}
 
-	if !setName {
-		fmt.Println("Missing name! Please specify one using -n")
+	for _, debug := range menu.Args {
+		if debug.Key == "debug" {
+			err := os.Stderr
+			err.Write([]byte("I [DEBUG] SSHConfig {\n"))
+			NewConfig._Debug_Print()
+			err.Write([]byte("}\n"))
+		}
+	}
+
+	if !SetHost {
+		fmt.Println("Hostname not set!")
 		os.Exit(1)
 	}
-	if !setHostname {
-		fmt.Println("Missing hostname! Please specify one using -h")
+	if !SetName {
+		fmt.Println("Profile name not set!")
 		os.Exit(1)
 	}
 
-	if !DoesPathExist(menu.ConfigDir) {
-		err := os.MkdirAll(menu.ConfigDir, 0755)
-		if err != nil {
-			fmt.Println("Config folder not found. Failed to generate the correct path for it")
-			panic(err)
-		}
-	}
-	newConfig.Write(menu.ConfigDir)
+	NewConfig.Write(menu.GetConfig())
 	os.Exit(0)
+
 }
 
-func StartSSH(config *ConfigObject, argv []string) {
-	if config.Username == "NULL" || config.Username == "" {
+func (menu *Menu) MRun() {
+	for _, arg := range menu.Args {
+		if arg.Key == "profile" {
+			menu.Config = Load(arg.Arg, menu.GetConfig())
+			menu.StartSSH()
+		}
+	}
+}
+
+func (menu *Menu) StartSSH() {
+	if menu.Config == nil {
+		panic("PANIC: Empty config object")
+	}
+
+	if menu.Config.Username == "NULL" || menu.Config.Username == "" {
 		user, err := user.Current()
 		if err != nil {
 			fmt.Println("Failed to get username")
 			panic(err)
 		}
-		config.Username = user.Username
+		menu.Config.Username = user.Username
 	}
 
 	sshProcess := exec.Cmd{
@@ -222,27 +340,27 @@ func StartSSH(config *ConfigObject, argv []string) {
 	sshProcess.Args = append(sshProcess.Args, sshProcess.Path)
 
 	// -i KeyFile
-	if config.UseKey {
+	if menu.Config.UseKey {
 		sshProcess.Args = append(sshProcess.Args, "-i")
-		sshProcess.Args = append(sshProcess.Args, config.KeyPath)
+		sshProcess.Args = append(sshProcess.Args, menu.Config.KeyPath)
 	}
 
 	// -o Args for ssh
-	if config.SSHArgs != nil {
-		sshProcess.Args = append(sshProcess.Args, config.SSHArgs...)
+	if menu.Config.SSHArgs != nil {
+		sshProcess.Args = append(sshProcess.Args, menu.Config.SSHArgs...)
 	}
 
 	// -p Port
 	sshProcess.Args = append(sshProcess.Args, "-p")
-	sshProcess.Args = append(sshProcess.Args, strconv.Itoa(int(config.Port)))
+	sshProcess.Args = append(sshProcess.Args, strconv.Itoa(int(menu.Config.Port)))
 
 	// User@Hostname:Port
-	sshProcess.Args = append(sshProcess.Args, config.Username+"@"+config.Hostname)
+	sshProcess.Args = append(sshProcess.Args, menu.Config.Username+"@"+menu.Config.Hostname)
 
-	for _, debug := range argv {
-		if debug == "-debug-sshcmd" {
-			fmt.Println(sshProcess.String())
-			os.Exit(0)
+	for _, debug := range menu.Args {
+		if debug.Key == "debug" {
+			err := os.Stderr
+			err.Write([]byte("I [DEBUG] Exec Command:" + sshProcess.String() + "\n"))
 		}
 	}
 	err := sshProcess.Run()
@@ -259,7 +377,7 @@ func StartSSH(config *ConfigObject, argv []string) {
 	}
 }
 
-func IsValidOpt(arg string) bool {
+func IsValidValue(arg string) bool {
 	if arg[0] == '-' {
 		return true
 	} else {
@@ -267,9 +385,9 @@ func IsValidOpt(arg string) bool {
 	}
 }
 
-func PrintOptions(argv []string) {
+func (menu *Menu) PrintOptions(argv []string) {
 	fmt.Println(argv[0] + ": [options] Profile")
-	fmt.Println("    -h, --help")
+	fmt.Println("    --help")
 	fmt.Println("    	Displays this help text")
 	fmt.Println("    -l, --list")
 	fmt.Println("    	Lists avalible profiles to run in the current config directoy")
@@ -289,13 +407,13 @@ func PrintOptions(argv []string) {
 	fmt.Println("    		Sets the username")
 	fmt.Println("    	-k, --key")
 	fmt.Println("    		Keyfile for connection")
+	fmt.Println("    	-o, --option")
+	fmt.Println("    		Addtional arguments to pass to ssh")
 
-	for _, val := range argv {
-		if val == "-debug" {
-			fmt.Println("    -d, --debug")
-			fmt.Println("    	Print debug commands; NOT SUPPORTED!")
-			fmt.Println("    -debug-sshcmd")
-			fmt.Println("    	Does not execute SSH but instead prints out the command it would run")
+	for _, val := range menu.Args {
+		if val.Key == "debug" {
+			fmt.Println("    -debug")
+			fmt.Println("    	Debugging flag to enable extra output. Usage of this flag is unstable and unsupported")
 		}
 	}
 	os.Exit(0)
