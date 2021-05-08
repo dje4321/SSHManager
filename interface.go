@@ -28,6 +28,33 @@ type Menu struct {
 	Config *ConfigObject
 }
 
+func ErrorAndExit(err string, exit int) {
+	stderr := os.Stderr
+	stderr.Write([]byte(err + "\n"))
+	os.Exit(exit)
+}
+
+func (menu *Menu) GetArgSlice(ValidKeys []string) (output []Arg) {
+	output = []Arg{}
+	for _, arg := range menu.Args {
+		for _, key := range ValidKeys {
+			if arg.Key == key {
+				output = append(output, arg)
+			}
+		}
+	}
+	return output
+}
+
+func (menu *Menu) GetSingleArg(ValidKey string) Arg {
+	for _, arg := range menu.Args {
+		if arg.Key == ValidKey {
+			return arg
+		}
+	}
+	return Arg{}
+}
+
 func IsArg(arg string, allowList []string) bool {
 	for _, val := range allowList {
 		if val == arg {
@@ -55,148 +82,95 @@ func (menu *Menu) GetConfig() string {
 }
 
 func (menu *Menu) Parse(argv []string) {
+	New := func(Argument string, Key string, Pos int, Value string, Error string, Valid bool) Arg {
+		output := Arg{
+			Arg:   Argument,
+			Key:   Key,
+			Pos:   Pos,
+			Value: Value,
+			Error: Error,
+			Valid: Valid,
+		}
+		return output
+	}
+	IsArgValid := func(argv []string, pos int, arg string) (valid bool, value string, err string) {
+		valid = false
+		value = ""
+		err = ""
+
+		if pos+1 < len(argv) && IsValidValue(argv[pos+1]) {
+			value = argv[pos+1]
+			valid = true
+		} else {
+			valid = false
+			err = fmt.Sprintf("Unable to locate value for %s", arg)
+		}
+
+		return valid, value, err
+	}
+
 	for k, arg := range argv {
 		switch {
 		case IsArg(arg, []string{"-m", "--make"}):
-			config := Arg{}
-			config.Arg = arg
-			config.Key = "make"
-			config.Pos = k
-			config.Valid = true
+			config := New(arg, "make", k, "", "", true)
 			menu.Args = append(menu.Args, config)
+
 		case IsArg(arg, []string{"-c", "--config"}):
-			config := Arg{}
-			config.Arg = arg
-			config.Key = "config"
-			config.Pos = k
-			if k+1 < len(argv) {
-				config.Value = argv[k+1]
-				config.Valid = true
-			} else {
-				config.Valid = false
-				config.Error = fmt.Sprintf("Unable to locate value for %s\n", arg)
-			}
+			valid, value, error := IsArgValid(argv, k, arg)
+			config := New(arg, "config", k, value, error, valid)
 			menu.Args = append(menu.Args, config)
+
 		case IsArg(arg, []string{"-l", "--list"}):
-			config := Arg{}
-			config.Arg = arg
-			config.Key = "list"
-			config.Pos = k
-			config.Valid = true
+			config := New(arg, "list", k, "", "", true)
 			menu.Args = append(menu.Args, config)
+
 		case IsArg(arg, []string{"-h", "--host"}):
-			config := Arg{}
-			config.Arg = arg
-			config.Key = "host"
-			config.Pos = k
-			if k+1 < len(argv) {
-				config.Value = argv[k+1]
-				config.Valid = true
-			} else {
-				config.Valid = false
-				config.Error = fmt.Sprintf("Unable to locate value for %s\n", arg)
-			}
+			valid, value, error := IsArgValid(argv, k, arg)
+			config := New(arg, "host", k, value, error, valid)
 			menu.Args = append(menu.Args, config)
+
 		case IsArg(arg, []string{"-u", "--user"}):
-			config := Arg{}
-			config.Arg = arg
-			config.Key = "user"
-			config.Pos = k
-			if k+1 < len(argv) {
-				config.Value = argv[k+1]
-				config.Valid = true
-			} else {
-				config.Valid = false
-				config.Error = fmt.Sprintf("Unable to locate value for %s\n", arg)
-			}
+			valid, value, error := IsArgValid(argv, k, arg)
+			config := New(arg, "user", k, value, error, valid)
 			menu.Args = append(menu.Args, config)
+
 		case IsArg(arg, []string{"-p", "--port"}):
-			config := Arg{}
-			config.Arg = arg
-			config.Key = "port"
-			config.Pos = k
-			if k+1 < len(argv) {
-				config.Value = argv[k+1]
-				config.Valid = true
-			} else {
-				config.Valid = false
-				config.Error = fmt.Sprintf("Unable to locate value for %s\n", arg)
-			}
+			valid, value, error := IsArgValid(argv, k, arg)
+			config := New(arg, "port", k, value, error, valid)
 			menu.Args = append(menu.Args, config)
+
 		case IsArg(arg, []string{"-n", "--name"}):
-			config := Arg{}
-			config.Arg = arg
-			config.Key = "name"
-			config.Pos = k
-			if k+1 < len(argv) {
-				config.Value = argv[k+1]
-				config.Valid = true
-			} else {
-				config.Valid = false
-				config.Error = fmt.Sprintf("Unable to locate value for %s\n", arg)
-			}
+			valid, value, error := IsArgValid(argv, k, arg)
+			config := New(arg, "name", k, value, error, valid)
 			menu.Args = append(menu.Args, config)
+
 		case IsArg(arg, []string{"-d", "--desc"}):
-			config := Arg{}
-			config.Arg = arg
-			config.Key = "desc"
-			config.Pos = k
-			if k+1 < len(argv) {
-				config.Value = argv[k+1]
-				config.Valid = true
-			} else {
-				config.Valid = false
-				config.Error = fmt.Sprintf("Unable to locate value for %s\n", arg)
-			}
+			valid, value, error := IsArgValid(argv, k, arg)
+			config := New(arg, "desc", k, value, error, valid)
 			menu.Args = append(menu.Args, config)
+
 		case IsArg(arg, []string{"-k", "--key"}):
-			config := Arg{}
-			config.Arg = arg
-			config.Key = "key"
-			config.Pos = k
-			if k+1 < len(argv) {
-				config.Value = argv[k+1]
-				config.Valid = true
-			} else {
-				config.Valid = false
-				config.Error = fmt.Sprintf("Unable to locate value for %s\n", arg)
-			}
+			valid, value, error := IsArgValid(argv, k, arg)
+			config := New(arg, "key", k, value, error, valid)
 			menu.Args = append(menu.Args, config)
+
 		case IsArg(arg, []string{"-o", "--option"}):
-			config := Arg{}
-			config.Arg = arg
-			config.Key = "option"
-			config.Pos = k
-			if k+1 < len(argv) {
-				config.Value = argv[k+1]
-				config.Valid = true
-			} else {
-				config.Valid = false
-				config.Error = fmt.Sprintf("Unable to locate value for %s\n", arg)
-			}
+			valid, value, error := IsArgValid(argv, k, arg)
+			config := New(arg, "option", k, value, error, valid)
 			menu.Args = append(menu.Args, config)
+
 		case IsArg(arg, []string{"--help"}):
-			config := Arg{}
-			config.Arg = arg
-			config.Key = "help"
-			config.Pos = k
-			config.Valid = true
+			config := New(arg, "help", k, "", "", true)
 			menu.Args = append(menu.Args, config)
+
 		case IsArg(arg, []string{"-debug"}):
-			config := Arg{}
-			config.Arg = arg
-			config.Key = "debug"
-			config.Pos = k
-			config.Valid = true
+			config := New(arg, "debug", k, "", "", true)
 			menu.Args = append(menu.Args, config)
+
 		}
 	}
 
-	config := Arg{}
-	config.Pos = len(argv) - 1
-	config.Arg = argv[config.Pos]
-	config.Key = "profile"
-	config.Valid = true
+	config := New(argv[len(argv)-1], "profile", len(argv)-1, argv[len(argv)-1], "", true)
 	menu.Args = append(menu.Args, config)
 }
 
@@ -207,8 +181,7 @@ func (menu *Menu) Start(argv []string) {
 	//Verify that all arguments pass are valid
 	for _, arg := range menu.Args {
 		if !arg.Valid {
-			fmt.Printf("%#v", arg)
-			os.Exit(1)
+			ErrorAndExit(arg.Error, 1)
 		}
 
 		if arg.Key == "help" {
@@ -291,12 +264,10 @@ func (menu *Menu) MMake() {
 	}
 
 	if !SetHost {
-		fmt.Println("Hostname not set!")
-		os.Exit(1)
+		ErrorAndExit("No hostname is defined!", 1)
 	}
 	if !SetName {
-		fmt.Println("Profile name not set!")
-		os.Exit(1)
+		ErrorAndExit("Profile name is defined", 1)
 	}
 
 	NewConfig.Write(menu.GetConfig())
@@ -308,6 +279,14 @@ func (menu *Menu) MRun() {
 	for _, arg := range menu.Args {
 		if arg.Key == "profile" {
 			menu.Config = Load(arg.Arg, menu.GetConfig())
+			for _, debug := range menu.Args {
+				if debug.Key == "debug" {
+					err := os.Stderr
+					err.Write([]byte("I [DEBUG] SSHConfig {\n"))
+					menu.Config._Debug_Print()
+					err.Write([]byte("}\n"))
+				}
+			}
 			menu.StartSSH()
 		}
 	}
@@ -363,6 +342,7 @@ func (menu *Menu) StartSSH() {
 			err.Write([]byte("I [DEBUG] Exec Command:" + sshProcess.String() + "\n"))
 		}
 	}
+	fmt.Println("Starting SSH...")
 	err := sshProcess.Run()
 	exit := sshProcess.ProcessState.ExitCode()
 	if exit > 0 {
@@ -378,7 +358,7 @@ func (menu *Menu) StartSSH() {
 }
 
 func IsValidValue(arg string) bool {
-	if arg[0] == '-' {
+	if arg[0] != '-' {
 		return true
 	} else {
 		return false
