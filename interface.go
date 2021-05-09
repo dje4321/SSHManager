@@ -174,6 +174,22 @@ func (menu *Menu) Parse(argv []string) {
 	menu.Args = append(menu.Args, config)
 }
 
+func (menu *Menu) ListProfiles() {
+	configDir := menu.GetConfig()
+	files, err := os.ReadDir(configDir)
+	if err != nil {
+		fmt.Println("Unable to read config directory")
+		panic(err)
+	}
+
+	for k, file := range files {
+		name := file.Name()
+		fmt.Printf("[%d] %s\n",k,name[:len(name)-5])
+	}
+
+	os.Exit(0)
+}
+
 func (menu *Menu) Start(argv []string) {
 	//Extract the arguments
 	menu.Parse(argv)
@@ -186,6 +202,10 @@ func (menu *Menu) Start(argv []string) {
 
 		if arg.Key == "help" {
 			menu.PrintOptions(argv)
+		}
+
+		if arg.Key == "list" {
+			menu.ListProfiles()
 		}
 	}
 
